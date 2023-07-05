@@ -1,7 +1,9 @@
 #![allow(unused_imports, dead_code, non_snake_case, non_upper_case_globals, unused_doc_comments)]
 
 use rand::{Rng, random};
-use std::{collections::BinaryHeap, time};
+use std::collections::{BinaryHeap, HashMap};
+use std::time;
+use std::rc::Rc;
 
 type ScoreType = isize;
 
@@ -119,6 +121,32 @@ impl MazeState {
         actions
     }
 
+    fn isFirstPlayer(&self) -> bool {
+        self.turn % 2 == 0
+    }
+
+    fn getFirstPlayerScoreForWinRate(&mut self) -> f64 {
+        match self.getWinningStatus() {
+            WinningStates::WIN => {
+                if self.isFirstPlayer() {
+                    return 1.0;
+                } else {
+                    return 0.0;
+                };
+            },
+            WinningStates::LOSE => {
+                if self.isFirstPlayer() {
+                    return 0.0;
+                } else {
+                    return 1.0;
+                };
+            },
+            _ => {
+                return 0.5;
+            },
+        }
+    }
+
     fn getWinningStatus(&mut self) -> WinningStates {
         if self.isDone() {
             if self.characters[0].game_score > self.characters[1].game_score {
@@ -130,6 +158,10 @@ impl MazeState {
             } 
         }
         WinningStates::CONTINUE
+    }
+
+    fn getScore(&self) -> ScoreType {
+        self.characters[0].game_score - self.characters[1].game_score
     }
 
     fn toString(&self) {
@@ -168,13 +200,54 @@ fn randomAction(state: &MazeState) -> usize {
 }
 
 
+// minimaxのためのスコア計算
+fn miniMaxScore(state: &MazeState, depth: usize) -> ScoreType {
+    if state.isDone() || depth == 0 {
+        return state.getScore();
+    }
+    let legal_actions = state.legalActions();
+    if legal_actions.is_empty() {
+        return state.getScore();
+    }
+    let mut best_score = -1_000_000;
+    for action in legal_actions {
+        let mut next_state = state.clone();
+        next_state.advance(action);
+        let score = -miniMaxScore(&next_state, depth - 1);
+        if score > best_score {
+            best_score = score;
+        }
+    }
+    best_score
+}
+
+// 深さを指定してminimaxで行動を決定する
+fn miniMaxAction(state: &MazeState, depth: usize) -> usize {
+    let mut best_action = 5;
+    let mut best_score = -1_000_000;
+    for action in state.legalActions() {
+        let mut next_state = state.clone();
+        next_state.advance(action);
+        let score = -miniMaxScore(&next_state, depth);
+        if score > best_score {
+            best_action = action;
+            best_score = score;
+        }
+    }
+    best_action
+}
+
+
+
+
 fn playGame(seed: Option<u64>) -> WinningStates {
     let mut state: MazeState = MazeState::new(seed);
     eprintln!("initial state");
     state.toString();
     while !state.isDone() {
         eprintln!("1p-----------------------------------");
-        let action = randomAction(&state);
+        //let action = randomAction(&state);
+        let action = miniMaxAction(&state, END_TURN);
         state.advance(action); //ここで1pから2pにターンが移る
         state.toString();
         if state.isDone() { //2pのターンで終了した場合はここで終了
@@ -193,7 +266,7 @@ fn playGame(seed: Option<u64>) -> WinningStates {
                 },
                 _ => {
                     unreachable!();
-                }
+                },
             }
         }
         eprintln!("2p-----------------------------------");
@@ -216,34 +289,77 @@ fn playGame(seed: Option<u64>) -> WinningStates {
                 },
                 _ => {
                     unreachable!();
-                }
+                },
             }
         }
     }
     state.getWinningStatus()
 }
 
-/*fn testAiScore(game_number:usize, seed: Option<u64>) -> f64 {
-    let mut total_score = 0;
-    for cnt in 0..game_number {
-        eprintln!("game: {} start", cnt);
-        let seed = match seed {
-            Some(seed) => Some(seed + cnt as u64),
-            None => None,
-        };
-        let score = playGame(seed);
-        total_score += score;
-        eprintln!("game: {} end, score:{}", cnt, score);
-        eprintln!();
-        
+
+
+
+type AIFunction = dyn Fn(&MazeState) -> usize;
+type StringAIPair = (String, Rc<AIFunction>);
+
+// ゲームをgame_number×2(先手後手を交代)回プレイしてaisの0番目のAIの勝率を表示する。
+fn testFirstPlayerWinRate(ais: &[StringAIPair], game_number: usize) {
+    let mut first_player_win_rate = 0.0;
+    for i in 0..game_number {
+        let base_state = MazeState::new(Some(i as u64));
+        for j in 0..2 {
+            let mut state = base_state.clone();
+            let first_ai = &ais[j];
+            let second_ai = &ais[(j + 1) % 2];
+            loop {
+                state.advance(first_ai.1(&state));
+                if state.isDone() {
+                    break;
+                }
+                state.advance(second_ai.1(&state));
+                if state.isDone() {
+                    break;
+                }
+            }
+            let mut win_rate_point = state.getFirstPlayerScoreForWinRate();
+            if j == 1 {
+                win_rate_point = 1.0 - win_rate_point;
+            } 
+            if win_rate_point >= 0.0 {
+                state.toString();
+            }
+            first_player_win_rate += win_rate_point;
+        }
+        eprintln!("i {} w {}", i, first_player_win_rate / ((i + 1) * 2) as f64);
     }
-    total_score as f64 / game_number as f64
+    first_player_win_rate /= (game_number * 2) as f64;
+    println!(
+        "Winning rate of {} to {}: {}",
+        ais[0].0, ais[1].0, first_player_win_rate
+    );
 }
-*/
 
 fn main() {
-    let _s = playGame(Some(314));
+    let ais: [StringAIPair; 2] = [
+        (
+            String::from("min-max"),
+            Rc::new(|state| miniMaxAction(state, END_TURN)),
+        ),
+        (
+            String::from("random"),
+            Rc::new(|state| randomAction(state)),
+        ),
+    ];
+    testFirstPlayerWinRate(&ais, 100);
 }
+
+
+/*fn main() {
+    for i in 1..20 {
+        let _s = playGame(Some(i));
+    }
+}
+*/
 
 #[derive(Debug, Clone)]
 struct TimeKeeper {
