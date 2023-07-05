@@ -1,2 +1,1 @@
-# thunder_book
-thunder book code written in Rust
+[ゲームで学ぶ探索アルゴリズム実践入門～木探索とメタヒューリスティクス](https://www.amazon.co.jp/%E3%82%B2%E3%83%BC%E3%83%A0%E3%81%A7%E5%AD%A6%E3%81%B6%E6%8E%A2%E7%B4%A2%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0%E5%AE%9F%E8%B7%B5%E5%85%A5%E9%96%80%EF%BD%9E%E6%9C%A8%E6%8E%A2%E7%B4%A2%E3%81%A8%E3%83%A1%E3%82%BF%E3%83%92%E3%83%A5%E3%83%BC%E3%83%AA%E3%82%B9%E3%83%86%E3%82%A3%E3%82%AF%E3%82%B9-%E9%9D%92%E6%9C%A8-%E6%A0%84%E5%A4%AA/dp/4297133601)に記載されているコードをRustで書いたもの
