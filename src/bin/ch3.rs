@@ -83,7 +83,7 @@ impl MazeState {
         }
     }
 
-    fn isDone(&self) -> bool {
+    fn is_done(&self) -> bool {
         assert!(self.turn <= END_TURN);
         self.turn == END_TURN
     }
@@ -105,7 +105,7 @@ impl MazeState {
         x >= 0 && x < W as isize && y >= 0 && y < H as isize
     }
 
-    fn legalActions(&self) -> Vec<usize> {
+    fn legal_actions(&self) -> Vec<usize> {
         let mut actions: Vec<usize> = Vec::new();
         for action in 0..4 {
             let x: isize = self.character.x as isize + dx[action];
@@ -121,7 +121,7 @@ impl MazeState {
         self.evaluate_score = self.game_score;
     }
 
-    fn toString(&self) {
+    fn to_string(&self) {
         eprintln!("turn:{}, score:{}", self.turn, self.game_score);
         for y in 0..H {
             for x in 0..W {
@@ -137,17 +137,17 @@ impl MazeState {
     }
 }
 
-fn randomAction(state: &MazeState) -> usize {
-    let legal_actions: Vec<usize> = state.legalActions();
+fn random_action(state: &MazeState) -> usize {
+    let legal_actions: Vec<usize> = state.legal_actions();
     let mut rng = rand::thread_rng();
     let index = rng.gen_range(0, legal_actions.len());
     legal_actions[index]
 }
 
-fn greedyAction(state: &MazeState) -> usize {
+fn greedy_action(state: &MazeState) -> usize {
     let mut max_score = 0;
     let mut best_action = 0;
-    for action in state.legalActions() {
+    for action in state.legal_actions() {
         let mut next_state: MazeState = state.clone();
         next_state.advance(action);
         next_state.evaluate_score();
@@ -159,7 +159,7 @@ fn greedyAction(state: &MazeState) -> usize {
     best_action
 }
 
-fn beamSearchAction(state: &MazeState, beam_width: usize, beam_depth: usize) -> usize {
+fn beam_search_action(state: &MazeState, beam_width: usize, beam_depth: usize) -> usize {
     let mut now_beam: BinaryHeap<MazeState> = BinaryHeap::new();
     let mut state = state.clone();
     state.evaluate_score();
@@ -171,7 +171,7 @@ fn beamSearchAction(state: &MazeState, beam_width: usize, beam_depth: usize) -> 
                 break;
             }
             let tmp_state: MazeState = now_beam.pop().unwrap();
-            for action in tmp_state.legalActions() {
+            for action in tmp_state.legal_actions() {
                 let mut next_state: MazeState = tmp_state.clone();
                 next_state.advance(action);
                 next_state.evaluate_score();
@@ -183,7 +183,7 @@ fn beamSearchAction(state: &MazeState, beam_width: usize, beam_depth: usize) -> 
         }
         now_beam = next_beam;
         let best_state = now_beam.peek().unwrap();
-        if best_state.isDone() {
+        if best_state.is_done() {
             break;
         }
     }
@@ -191,7 +191,7 @@ fn beamSearchAction(state: &MazeState, beam_width: usize, beam_depth: usize) -> 
     
 }
 
-fn beamSearchActionWithTimeThreshold(state: &MazeState, beam_width: usize, time_threshold: f64) -> usize {
+fn beam_search_action_with_time_threshold(state: &MazeState, beam_width: usize, time_threshold: f64) -> usize {
     let mut now_beam: BinaryHeap<MazeState> = BinaryHeap::new();
     let mut best_state = &MazeState::new(Some(1));
     let mut state = state.clone();
@@ -206,7 +206,7 @@ fn beamSearchActionWithTimeThreshold(state: &MazeState, beam_width: usize, time_
                 break;
             }
             let tmp_state: MazeState = now_beam.pop().unwrap();
-            for action in tmp_state.legalActions() {
+            for action in tmp_state.legal_actions() {
                 let mut next_state = tmp_state.clone();
                 next_state.advance(action);
                 next_state.evaluate_score();
@@ -218,14 +218,14 @@ fn beamSearchActionWithTimeThreshold(state: &MazeState, beam_width: usize, time_
         }
         now_beam = next_beam;
         best_state = now_beam.peek().unwrap();
-        if best_state.isDone() || time_keeper.isTimeOver(){
+        if best_state.is_done() || time_keeper.isTimeOver(){
             break;
         }
     }
     best_state.first_action
 }
 
-fn chokudaiSearchAction(state: &MazeState, beam_width: usize, beam_depth: usize, beam_number:usize) -> usize {
+fn chokudai_search_action(state: &MazeState, beam_width: usize, beam_depth: usize, beam_number:usize) -> usize {
     let mut beam: Vec<BinaryHeap<MazeState>> = vec![BinaryHeap::new(); beam_depth+1];
     beam[0].push(state.clone());
     for _cnt in 0..beam_number {
@@ -235,12 +235,12 @@ fn chokudaiSearchAction(state: &MazeState, beam_width: usize, beam_depth: usize,
                     break;
                 }
                 let now_state = beam[t].peek().unwrap().clone();
-                if now_state.isDone() {
+                if now_state.is_done() {
                     break;
                 }
                 beam[t].pop();
 
-                for action in now_state.legalActions() {
+                for action in now_state.legal_actions() {
                     let mut next_state = now_state.clone();
                     next_state.advance(action);
                     next_state.evaluate_score();
@@ -260,7 +260,7 @@ fn chokudaiSearchAction(state: &MazeState, beam_width: usize, beam_depth: usize,
     0
 }
 
-fn chokudaiSearchActionWithTimeThreshold(state: &MazeState, beam_width: usize, beam_depth: usize, time_threshold: f64) -> usize {
+fn chokudai_search_action_with_time_threshold(state: &MazeState, beam_width: usize, beam_depth: usize, time_threshold: f64) -> usize {
     let mut beam: Vec<BinaryHeap<MazeState>> = vec![BinaryHeap::new(); beam_depth+1];
     beam[0].push(state.clone());
     let time_keeper = TimeKeeper::new(time_threshold);
@@ -271,12 +271,12 @@ fn chokudaiSearchActionWithTimeThreshold(state: &MazeState, beam_width: usize, b
                     break;
                 }
                 let now_state: MazeState = beam[t].peek().unwrap().clone();
-                if now_state.isDone() {
+                if now_state.is_done() {
                     break;
                 }
                 beam[t].pop();
 
-                for action in now_state.legalActions() {
+                for action in now_state.legal_actions() {
                     let mut next_state = now_state.clone();
                     next_state.advance(action);
                     next_state.evaluate_score();
@@ -299,23 +299,23 @@ fn chokudaiSearchActionWithTimeThreshold(state: &MazeState, beam_width: usize, b
     0
 }
 
-fn playGame(seed: Option<u64>) -> ScoreType {
+fn play_game(seed: Option<u64>) -> ScoreType {
     let mut state: MazeState = MazeState::new(seed);
-    //state.toString();
-    while !state.isDone() {
-        //let action: usize = randomAction(&state);
-        //let action: usize = greedyAction(&state);
-        //let action: usize = beamSearchAction(&state, 10, 10);
-        //let action: usize = beamSearchActionWithTimeThreshold(&state, 5, 0.001);
-        //let action: usize = chokudaiSearchAction(&state, 1, 10, 10);
-        let action: usize = chokudaiSearchActionWithTimeThreshold(&state, 1, 10, 0.01);
+    //state.to_string();
+    while !state.is_done() {
+        //let action: usize = random_action(&state);
+        //let action: usize = greedy_action(&state);
+        //let action: usize = beam_search_action(&state, 10, 10);
+        //let action: usize = beam_search_action_with_time_threshold(&state, 5, 0.001);
+        //let action: usize = chokudai_search_action(&state, 1, 10, 10);
+        let action: usize = chokudai_search_action_with_time_threshold(&state, 1, 10, 0.01);
         state.advance(action);
-        //state.toString();
+        //state.to_string();
     }
     state.game_score
 }
 
-fn testAiScore(game_number:usize, seed: Option<u64>) -> f64 {
+fn test_AI_score(game_number:usize, seed: Option<u64>) -> f64 {
     let mut total_score = 0;
     for cnt in 0..game_number {
         eprintln!("game: {} start", cnt);
@@ -323,7 +323,7 @@ fn testAiScore(game_number:usize, seed: Option<u64>) -> f64 {
             Some(seed) => Some(seed + cnt as u64),
             None => None,
         };
-        let score = playGame(seed);
+        let score = play_game(seed);
         total_score += score;
         eprintln!("game: {} end, score:{}", cnt, score);
         eprintln!();
@@ -333,9 +333,9 @@ fn testAiScore(game_number:usize, seed: Option<u64>) -> f64 {
 }
 
 fn main() {
-    //let score = playGame(Some(314));
+    //let score = _gSome(314));
     //println!("final score: {}", score);
-    let score = testAiScore(100, Some(14));
+    let score = test_AI_score(10, Some(14));
     println!("average score: {}", score);
 }
 
