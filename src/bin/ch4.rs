@@ -1,3 +1,6 @@
+// [世界四連覇AIエンジニアがゼロから教えるゲーム木探索入門] chapter4を実装
+// thunder(@thun_c)さんのコードを参考にしました
+
 #![allow(unused_imports, dead_code, non_snake_case, non_upper_case_globals, unused_doc_comments)]
 
 use rand::{Rng, random};
@@ -77,7 +80,7 @@ impl MazeState {
         }
     }
 
-    fn setCharacter(&mut self, id: usize, y:usize, x:usize) {
+    fn set_character(&mut self, id: usize, y:usize, x:usize) {
         assert!(id < N_CHARACTER);
         self.characters[id] = Coord { y, x };
     }
@@ -88,7 +91,7 @@ impl MazeState {
         for id in 0..N_CHARACTER {
             let y = rng.gen_range(0, H);
             let x = rng.gen_range(0, W);
-            self.setCharacter(id, y, x);
+            self.set_character(id, y, x);
         }
     }
 
@@ -97,32 +100,32 @@ impl MazeState {
         let id = rng.gen_range(0, N_CHARACTER);
         let y = rng.gen_range(0, H);
         let x = rng.gen_range(0, W);
-        self.setCharacter(id, y, x);
+        self.set_character(id, y, x);
     }
 
-    fn getScore(&self,is_print: bool) -> ScoreType {
+    fn get_score(&self,is_print: bool) -> ScoreType {
         let mut tmp_state = self.clone();
         for character in self.characters.iter () {
             tmp_state.grid[character.y][character.x] = 0;
         }
         if is_print {
-            tmp_state.toString();
+            tmp_state.to_string();
         }
-        while !tmp_state.isDone() {
+        while !tmp_state.is_done() {
             tmp_state.advance();
             if is_print {
-                tmp_state.toString();
+                tmp_state.to_string();
             }
         }
         tmp_state.game_score
     }
 
-    fn isDone(&self) -> bool {
+    fn is_done(&self) -> bool {
         assert!(self.turn <= END_TURN);
         self.turn == END_TURN
     }
 
-    fn movePlayer(&mut self, id:usize) {
+    fn move_player(&mut self, id:usize) {
         assert!(id < N_CHARACTER);
         let mut best_point:ScoreType = -1;
         let mut best_action = 0;
@@ -144,7 +147,7 @@ impl MazeState {
 
     fn advance(&mut self) {
         for id in 0..N_CHARACTER {
-            self.movePlayer(id);
+            self.move_player(id);
         }
         for character in self.characters.iter() {
             self.game_score += self.grid[character.y][character.x] as ScoreType;
@@ -161,7 +164,7 @@ impl MazeState {
         self.evaluate_score = self.game_score;
     }
 
-    fn toString(&self) {
+    fn to_string(&self) {
         eprintln!("turn:{}, score:{}", self.turn, self.game_score);
         let mut str: Vec<Vec<char>> = vec![vec!['.'; W]; H];
         for y in 0..H {
@@ -179,25 +182,25 @@ impl MazeState {
     }
 }
 
-fn randomAction(state: &MazeState) -> MazeState {
+fn random_action(state: &MazeState) -> MazeState {
     let mut now_state = state.clone();
     let mut rng = rand::thread_rng();
     for id in 0..N_CHARACTER {
         let y = rng.gen_range(0, H);
         let x = rng.gen_range(0, W);
-        now_state.setCharacter(id, y, x);
+        now_state.set_character(id, y, x);
     }
     now_state
 }
 
-fn hillClimb(state: &MazeState, number: usize) -> MazeState {
+fn hill_climb(state: &MazeState, number: usize) -> MazeState {
     let mut now_state = state.clone();
     now_state.init();
-    let mut best_score = now_state.getScore(false);
+    let mut best_score = now_state.get_score(false);
     for _ in 0..number {
         let mut next_state = now_state.clone();
         next_state.transition();
-        let next_score = next_state.getScore(false);
+        let next_score = next_state.get_score(false);
         if next_score > best_score {
             now_state = next_state;
             best_score = next_score;
@@ -206,10 +209,10 @@ fn hillClimb(state: &MazeState, number: usize) -> MazeState {
     now_state
 }
 
-fn simulatedAnnealing(state: &MazeState, number:usize, start_temp: f64, end_temp: f64) -> MazeState {
+fn simulated_annealing(state: &MazeState, number:usize, start_temp: f64, end_temp: f64) -> MazeState {
     let mut now_state = state.clone();
     now_state.init();
-    let mut now_score = now_state.getScore(false);
+    let mut now_score = now_state.get_score(false);
     let mut best_score = now_score;
     let mut best_state = now_state.clone();
 
@@ -218,7 +221,7 @@ fn simulatedAnnealing(state: &MazeState, number:usize, start_temp: f64, end_temp
     for loop_cnt in 0..number {
         let mut next_state = now_state.clone();
         next_state.transition();
-        let next_score = next_state.getScore(false);
+        let next_score = next_state.get_score(false);
         let diff = next_score - best_score;
         if diff > 0 {
             now_score = next_score;
@@ -245,14 +248,14 @@ fn simulatedAnnealing(state: &MazeState, number:usize, start_temp: f64, end_temp
 
 fn playGame(seed: Option<u64>) -> ScoreType {
     let mut state: MazeState = MazeState::new(seed);
-    //state = randomAction(&state);
-    //state = hillClimb(&state, 100000);
-    state = simulatedAnnealing(&state, 100000, 100.0, 0.0);
-    let score = state.getScore(false);
+    //state = random_action(&state);
+    //state = hill_climb(&state, 100000);
+    state = simulated_annealing(&state, 100000, 100.0, 0.0);
+    let score = state.get_score(false);
     score
 }
 
-fn testAiScore(game_number:usize, seed: Option<u64>) -> f64 {
+fn test_AI_score(game_number:usize, seed: Option<u64>) -> f64 {
     let mut total_score = 0;
     for cnt in 0..game_number {
         eprintln!("game: {} start", cnt);
@@ -270,7 +273,7 @@ fn testAiScore(game_number:usize, seed: Option<u64>) -> f64 {
 }
 
 fn main() {
-    let score = testAiScore(10, Some(314));
+    let score = test_AI_score(10, Some(314));
     println!("average score: {}", score);
 }
 

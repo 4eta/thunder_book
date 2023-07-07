@@ -1,3 +1,6 @@
+// [世界四連覇AIエンジニアがゼロから教えるゲーム木探索入門] chapter5を実装
+// thunder(@thun_c)さんのコードを参考にしました
+
 #![allow(unused_imports, dead_code, non_snake_case, non_upper_case_globals, unused_doc_comments)]
 
 use rand::{Rng, random};
